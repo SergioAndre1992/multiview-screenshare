@@ -1,6 +1,6 @@
-# Electron ScreenShare
+# multiview-screenshare
 
-Stream a multi-webview dashboard to any browser with full mouse and keyboard control.  
+Multi-webview dashboard with built-in browser screenshare and full mouse and keyboard control.  
 No Python, no VNC, no extra servers — the Electron app **is** the server.
 
 ## How it works

@@ -1,7 +1,7 @@
 {
-  "name": "electron-screenshare",
+  "name": "multiview-screenshare",
   "version": "1.0.0",
-  "description": "Stream your Electron app window to a browser",
+  "description": "Multi-webview dashboard with built-in browser screenshare",
   "main": "src/main.js",
   "scripts": {
     "start": "electron ."
