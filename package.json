@@ -4,12 +4,15 @@
   "description": "Multi-webview dashboard with built-in browser screenshare",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-packager . multiview-screenshare --platform=win32 --arch=x64 --out=dist --overwrite --ignore=node_modules/@electron/packager --ignore=dist",
+    "postbuild": "xcopy /E /I /Y assets dist\\multiview-screenshare-win32-x64\\config\\"
   },
   "dependencies": {
     "ws": "^8.17.0"
   },
   "devDependencies": {
+    "@electron/packager": "^18.3.5",
     "electron": "^42.3.0"
   }
 }

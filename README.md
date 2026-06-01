@@ -1,4 +1,4 @@
-# multiview-screenshare
+# Electron multiview-screenshare
 
 Multi-webview dashboard with built-in browser screenshare and full mouse and keyboard control.  
 No Python, no VNC, no extra servers — the Electron app **is** the server.
@@ -41,6 +41,27 @@ screenshare_base/
 npm install
 npm start
 ```
+
+## Build
+
+```cmd
+npm run build
+```
+
+Produces `dist/multiview-screenshare-win32-x64/` with:
+
+```
+multiview-screenshare-win32-x64/
+├── multiview-screenshare.exe
+├── config/               ← edit freely without recompiling
+│   ├── sites.json
+│   ├── logos/
+│   │   └── logo1.png … logo5.png
+│   └── viewer.html
+└── resources/            ← app bundle (do not edit)
+```
+
+At runtime the app looks for `config/sites.json` next to the exe first, falling back to the bundled `assets/` during development (`npm start`).
 
 Open `http://localhost:9000` in any browser, enter the token, and click **INPUT ON** to enable remote control.
 
