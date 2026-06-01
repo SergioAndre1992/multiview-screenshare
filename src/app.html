@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Electron App</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d10;
+    --surface: #16161a;
+    --border: #2a2a35;
+    --accent: #00e5ff;
+    --text: #e0e0ec;
+    --muted: #55556a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Title bar ── */
+  #titlebar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 0 0 16px;
+    height: 36px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--muted);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-app-region: drag;
+  }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.85rem; color: var(--accent); letter-spacing: 0.1em; }
+  .pill { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); padding: 3px 10px; border-radius: 2px; -webkit-app-region: no-drag; }
+  .dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .dot.on { background: #00ff88; box-shadow: 0 0 5px #00ff88; }
+  .url-box { background: var(--bg); border: 1px solid var(--border); padding: 3px 10px; border-radius: 2px; color: var(--accent); font-size: 0.68rem; letter-spacing: 0.04em; -webkit-app-region: no-drag; }
+  #win-controls { margin-left: auto; display: flex; height: 36px; -webkit-app-region: no-drag; }
+  .wc-btn { width: 46px; height: 36px; background: transparent; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+  .wc-btn:hover       { background: rgba(255,255,255,0.08); color: var(--text); }
+  .wc-btn.close:hover { background: #c42b1c; color: #fff; }
+
+  /* ── Tab bar — matches multiview style ── */
+  #tab-bar {
+    display: none;
+    width: 100%;
+    flex-shrink: 0;
+    align-items: stretch;
+    gap: 4px;
+    padding: 5px 8px;
+    background: rgba(0,0,0,0.35);
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 7px 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255,255,255,0.45);
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tab-btn:hover  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+  .tab-btn.active { background: rgba(255,255,255,0.18); color: #fff; font-weight: 600; }
+
+  /* ── Logo bar — matches multiview style ── */
+  #logo-bar {
+    display: none;
+    width: 100%;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 0 24px;
+    background: transparent;
+  }
+  #logo-plate {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 8px 28px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.09);
+    backdrop-filter: blur(8px);
+  }
+  #logo-plate img {
+    width: auto;
+    object-fit: contain;
+    opacity: 0.88;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.35));
+  }
+
+  /* ── Pages container ── */
+  #pages-container { flex: 1; position: relative; width: 100%; order: 1; }
+
+  /* ── Grid — matches multiview style ── */
+  .page-grid {
+    display: grid;
+    position: absolute;
+    inset: 0;
+    gap: 6px;
+    padding: 6px;
+    opacity: 1;
+    transition: opacity 120ms ease;
+  }
+  .page-grid.hidden { opacity: 0; pointer-events: none; }
+
+  /* ── Tile — matches multiview style ── */
+  .tile {
+    position: relative;
+    background: #16213E;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Tile bar — matches multiview style ── */
+  .tile-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+    z-index: 10;
+    pointer-events: none;
+  }
+  .tile-bar span {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: system-ui, sans-serif;
+  }
+  .tile-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .tile-bar button {
+    pointer-events: all;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+    width: 22px; height: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .tile-bar button:hover { background: rgba(255,255,255,0.3); }
+  .tile-bar .fs-close-btn { display: none; }
+  .tile-bar.fs-active {
+    height: 36px;
+    pointer-events: all;
+    background: rgba(13,27,42,0.92);
+  }
+  .tile-bar.fs-active .fs-close-btn { display: flex; }
+  .tile-bar.fs-active button[title="Fullscreen"] { display: none; }
+
+  webview { width: 100%; height: 100%; border: none; }
+
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <div class="logo">SCREENSHARE</div>
+  <div class="pill">
+    <div class="dot" id="dot"></div>
+    <span id="status">starting…</span>
+  </div>
+  <div class="pill">viewers: <span id="viewers" style="color:var(--text);margin-left:6px">0</span></div>
+  <div class="url-box" id="url-box">—</div>
+  <div id="win-controls">
+    <button class="wc-btn" onclick="window.electronAPI.windowMinimize()" title="Minimize">&#x2013;</button>
+    <button class="wc-btn" onclick="window.electronAPI.windowMaximize()" title="Maximize">&#x25A1;</button>
+    <button class="wc-btn close" onclick="window.electronAPI.windowClose()" title="Close">&#x2715;</button>
+  </div>
+</div>
+
+<div id="tab-bar"></div>
+<div id="logo-bar"><div id="logo-plate"></div></div>
+<div id="pages-container"></div>
+
+<script>
+// ── Webview position map ─────────────────────────────────────────────────
+function reportWebviewMap() {
+  const TILE_BAR_H = 28;  // matches .tile-bar height — keep the button strip in main DOM
+  const map = [];
+  document.querySelectorAll('webview').forEach(wv => {
+    if (typeof wv.getWebContentsId !== 'function') return;
+    const id   = wv.getWebContentsId();
+    const rect = wv.getBoundingClientRect();
+    map.push({
+      id,
+      x:      rect.left,
+      y:      rect.top + TILE_BAR_H,
+      width:  rect.width,
+      height: rect.height - TILE_BAR_H,
+    });
+  });
+  window.electronAPI.reportWebviewMap(map);
+}
+
+window.electronAPI.onRequestWebviewMap(reportWebviewMap);
+window.addEventListener('resize', reportWebviewMap);
+
+// ── Remote cursor dot (debug only) ───────────────────────────────────────
+window.electronAPI.onRemoteCursor(({ x, y, debug }) => {
+  if (!debug) return;
+  let dot = document.getElementById('remote-cursor');
+  if (!dot) {
+    dot = document.createElement('div');
+    dot.id = 'remote-cursor';
+    Object.assign(dot.style, {
+      position: 'fixed', width: '12px', height: '12px', borderRadius: '50%',
+      background: '#ff3d6b', boxShadow: '0 0 6px #ff3d6b', pointerEvents: 'none',
+      transform: 'translate(-50%,-50%)', zIndex: '9999',
+    });
+    document.body.appendChild(dot);
+  }
+  dot.style.left = x + 'px';
+  dot.style.top  = y + 'px';
+});
+
+// ── Grid builder ──────────────────────────────────────────────────────────
+const tabBar         = document.getElementById('tab-bar');
+const pagesContainer = document.getElementById('pages-container');
+
+const pageGrids = [];
+let activePageIndex = 0;
+
+// ── Fullscreen (CSS-only — webview never moves in DOM so it never reloads) ──
+let activeTile = null;
+let savedRect  = null;
+const DURATION = '320ms';
+const EASING   = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFullscreen(); });
+
+function openFullscreen(tile, site) {
+  if (activeTile) return;
+  savedRect = tile.getBoundingClientRect();
+  tile.style.position     = 'fixed';
+  tile.style.left         = savedRect.left   + 'px';
+  tile.style.top          = savedRect.top    + 'px';
+  tile.style.width        = savedRect.width  + 'px';
+  tile.style.height       = savedRect.height + 'px';
+  tile.style.zIndex       = '999';
+  tile.style.borderRadius = '6px';
+  tile.style.overflow     = 'hidden';
+  tile.querySelector('.tile-bar').classList.add('fs-active');
+  tile.querySelector('.tile-bar span').textContent = site.title;
+  requestAnimationFrame(() => {
+    tile.style.transition   = `left ${DURATION} ${EASING}, top ${DURATION} ${EASING}, width ${DURATION} ${EASING}, height ${DURATION} ${EASING}, border-radius ${DURATION} ${EASING}`;
+    tile.style.left         = '0';
+    tile.style.top          = '0';
+    tile.style.width        = '100vw';
+    tile.style.height       = '100vh';
+    tile.style.borderRadius = '0';
+  });
+  activeTile = tile;
+}
+
+function closeFullscreen() {
+  if (!activeTile) return;
+  activeTile.style.left         = savedRect.left   + 'px';
+  activeTile.style.top          = savedRect.top    + 'px';
+  activeTile.style.width        = savedRect.width  + 'px';
+  activeTile.style.height       = savedRect.height + 'px';
+  activeTile.style.borderRadius = '6px';
+  activeTile.addEventListener('transitionend', () => {
+    ['position','left','top','width','height','zIndex','borderRadius','overflow','transition'].forEach(p => {
+      activeTile.style[p] = '';
+    });
+    activeTile.querySelector('.tile-bar').classList.remove('fs-active');
+    activeTile = null;
+    savedRect  = null;
+  }, { once: true });
+}
+
+function buildTile(parentGrid, site, globalHideScrollbars) {
+  const g = site.grid || {};
+
+  const tile = document.createElement('div');
+  tile.className = 'tile';
+  tile.style.gridColumn = `${g.col} / span ${g.colSpan || 1}`;
+  tile.style.gridRow    = `${g.row} / span ${g.rowSpan || 1}`;
+
+  const wv = document.createElement('webview');
+  wv.src = site.url;
+  wv.setAttribute('allowpopups', '');
+  wv.setAttribute('partition', 'persist:ss');
+  wv.addEventListener('dom-ready', () => {
+    if (site.zoom) wv.setZoomFactor(site.zoom);
+    const noScroll = site.hideScrollbars !== undefined ? site.hideScrollbars : globalHideScrollbars;
+    if (noScroll) wv.insertCSS('::-webkit-scrollbar { display: none !important; }');
+    reportWebviewMap();
+  });
+
+  const bar = document.createElement('div');
+  bar.className = 'tile-bar';
+
+  const label = document.createElement('span');
+  label.textContent = site.title || '';
+
+  const btnGroup = document.createElement('div');
+  btnGroup.className = 'tile-bar-left';
+
+  const fsBtn = document.createElement('button');
+  fsBtn.textContent = '⛶';
+  fsBtn.title = 'Fullscreen';
+  fsBtn.addEventListener('click', () => openFullscreen(tile, site));
+
+  const reloadBtn = document.createElement('button');
+  reloadBtn.textContent = '⟳';
+  reloadBtn.title = 'Reload';
+  reloadBtn.addEventListener('click', () => wv.reload());
+
+  const fsCloseBtn = document.createElement('button');
+  fsCloseBtn.className = 'fs-close-btn';
+  fsCloseBtn.textContent = '✕';
+  fsCloseBtn.title = 'Exit fullscreen';
+  fsCloseBtn.addEventListener('click', closeFullscreen);
+
+  btnGroup.appendChild(fsBtn);
+  btnGroup.appendChild(reloadBtn);
+  btnGroup.appendChild(fsCloseBtn);
+
+  bar.appendChild(label);
+  bar.appendChild(btnGroup);
+
+  tile.appendChild(wv);
+  tile.appendChild(bar);
+  parentGrid.appendChild(tile);
+}
+
+function switchPage(index) {
+  if (index === activePageIndex) return;
+  pageGrids[activePageIndex].classList.add('hidden');
+  pageGrids[index].classList.remove('hidden');
+  tabBar.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+  activePageIndex = index;
+}
+
+async function buildGrid() {
+  const config = await window.electronAPI.getSites();
+
+  if (config.background) document.body.style.background = config.background;
+
+  // Title bar text / color / size
+  const titleCfg = config.title || {};
+  const logoEl = document.querySelector('.logo');
+  if (titleCfg.text)  logoEl.textContent       = titleCfg.text;
+  if (titleCfg.color) logoEl.style.color       = titleCfg.color;
+  if (titleCfg.size)  logoEl.style.fontSize    = titleCfg.size + 'px';
+  if (titleCfg.font)  logoEl.style.fontFamily  = titleCfg.font;
+
+  // Logo bar
+  const barCfg = config.logoBar;
+  if (barCfg) {
+    const logoBar   = document.getElementById('logo-bar');
+    const logoPlate = document.getElementById('logo-plate');
+    const barHeight = barCfg.height || 64;
+    logoBar.style.display = 'flex';
+    logoBar.style.height  = barHeight + 'px';
+    logoBar.style.order   = barCfg.position === 'top' ? '-1' : '2';
+    if (barCfg.plateColor) logoPlate.style.background = barCfg.plateColor;
+    const imgHeight  = Math.round(barHeight - 30);
+    const logosPath  = config._logosPath;
+    ['logo1.png','logo2.png','logo3.png','logo4.png','logo5.png'].forEach(name => {
+      const img = document.createElement('img');
+      img.style.height = imgHeight + 'px';
+      img.style.display = 'none';
+      img.onload  = () => { img.style.display = ''; };
+      img.onerror = () => img.remove();
+      img.src = `file:///${logosPath}/logos/${name}`;
+      logoPlate.appendChild(img);
+    });
+  }
+
+  // Pages
+  const pages = config.pages || [{
+    name: '',
+    gridCols: config.gridCols || 2,
+    gridRows: config.gridRows || 2,
+    sites: config.sites || [],
+  }];
+
+  pages.forEach((page, i) => {
+    const grid = document.createElement('div');
+    grid.className = 'page-grid' + (i === 0 ? '' : ' hidden');
+    grid.style.gridTemplateColumns = `repeat(${page.gridCols || 2}, 1fr)`;
+    grid.style.gridTemplateRows   = `repeat(${page.gridRows || 2}, 1fr)`;
+    (page.sites || []).forEach(site => buildTile(grid, site, config.hideScrollbars));
+    pagesContainer.appendChild(grid);
+    pageGrids.push(grid);
+  });
+
+  if (pages.length > 1) {
+    tabBar.style.display = 'flex';
+    pages.forEach((page, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = page.name || `Page ${i + 1}`;
+      btn.addEventListener('click', () => switchPage(i));
+      tabBar.appendChild(btn);
+    });
+  }
+}
+
+// ── Screen capture + streaming ─────────────────────────────────────────────
+let config      = null;
+let capturing   = false;
+let mediaStream = null;
+let videoEl     = null;
+let offscreen   = null;
+let offCtx      = null;
+
+async function init() {
+  await buildGrid();
+
+  config = await window.electronAPI.getConfig();
+  document.getElementById('url-box').textContent =
+    `http://localhost:${config.wsPort}  ·  token: ${config.token}`;
+
+  await startCapture();
+
+  setInterval(async () => {
+    const n = await window.electronAPI.getViewerCount();
+    document.getElementById('viewers').textContent = n;
+    document.getElementById('dot').className = 'dot' + (n > 0 ? ' on' : '');
+    document.getElementById('status').textContent =
+      n > 0 ? `streaming to ${n}` : 'waiting for viewers';
+  }, 1000);
+}
+
+async function startCapture() {
+  const sourceId = await window.electronAPI.getWindowSource();
+
+  const constraints = {
+    audio: false,
+    video: {
+      mandatory: {
+        chromeMediaSource:   'desktop',
+        chromeMediaSourceId: sourceId,
+        maxWidth:            screen.width,
+        maxHeight:           screen.height,
+        maxFrameRate:        config.targetFps,
+      }
+    }
+  };
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (e) {
+    console.error('getUserMedia failed:', e);
+    document.getElementById('status').textContent = 'capture error';
+    return;
+  }
+
+  videoEl = document.createElement('video');
+  videoEl.srcObject = mediaStream;
+  videoEl.play();
+
+  videoEl.addEventListener('loadedmetadata', () => {
+    offscreen        = document.createElement('canvas');
+    offscreen.width  = videoEl.videoWidth;
+    offscreen.height = videoEl.videoHeight;
+    offCtx           = offscreen.getContext('2d');
+    window.electronAPI.reportCaptureDims(offscreen.width, offscreen.height);
+    capturing = true;
+    setInterval(captureFrame, 1000 / config.targetFps);
+    console.log(`[capture] ${offscreen.width}x${offscreen.height} @ ${config.targetFps}fps`);
+  });
+}
+
+function captureFrame() {
+  if (!capturing || !offCtx) return;
+  offCtx.drawImage(videoEl, 0, 0);
+  const jpeg = offscreen.toDataURL('image/jpeg', config.quality).split(',')[1];
+  window.electronAPI.sendFrame(jpeg);
+}
+
+init();
+</script>
+</body>
+</html>

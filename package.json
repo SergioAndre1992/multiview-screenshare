@@ -1,0 +1,15 @@
+{
+  "name": "electron-screenshare",
+  "version": "1.0.0",
+  "description": "Stream your Electron app window to a browser",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "electron": "^42.3.0"
+  }
+}

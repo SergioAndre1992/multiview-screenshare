@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScreenShare Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0a0a0b;
+    --surface: #111114;
+    --border:  #222228;
+    --accent:  #00e5ff;
+    --accent2: #ff3d6b;
+    --text:    #e8e8f0;
+    --muted:   #555566;
+    --online:  #00ff88;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+
+  .pill {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .3s; }
+  .dot.online { background: var(--online); box-shadow: 0 0 6px var(--online); }
+  .dot.error  { background: var(--accent2); }
+
+  .stats { margin-left: auto; display: flex; gap: 16px; font-size: 0.68rem; color: var(--muted); }
+  .stats span { color: var(--text); }
+
+  .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all .15s;
+    letter-spacing: 0.05em;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { border-color: var(--accent2); color: var(--accent2); }
+
+  /* connect overlay */
+  #overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 40px 48px;
+    width: 400px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .box h2 {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 1.3rem; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .box h2 span { color: var(--accent); }
+  .field label {
+    display: block; font-size: 0.65rem; color: var(--muted);
+    margin-bottom: 5px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .field input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; padding: 9px 12px; outline: none; border-radius: 2px;
+    transition: border-color .15s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .err { font-size: 0.7rem; color: var(--accent2); display: none; }
+  .connect-btn {
+    background: var(--accent); color: var(--bg); border: none;
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 0.82rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 12px; cursor: pointer; border-radius: 2px; transition: opacity .15s;
+  }
+  .connect-btn:hover { opacity: .85; }
+
+  /* viewport */
+  #viewport {
+    flex: 1; overflow: hidden; position: relative;
+    background: #000; cursor: none;
+  }
+  canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+  #cur {
+    position: absolute; width: 12px; height: 12px;
+    border: 2px solid var(--accent); border-radius: 50%;
+    pointer-events: none; transform: translate(-50%,-50%);
+    display: none; z-index: 10; transition: width .1s, height .1s;
+  }
+  #cur.clicking { width: 8px; height: 8px; background: var(--accent); }
+
+  footer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 20px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 0.67rem; color: var(--muted); flex-shrink: 0;
+  }
+  footer .sep { flex: 1; }
+
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="box">
+    <h2>Screen<span>Share</span></h2>
+    <p style="font-size:.72rem;color:var(--muted);line-height:1.7">
+      Connect to a running Electron app.<br>
+      Default: <code style="color:var(--accent)">ws://localhost:9000/ws</code>
+    </p>
+    <div class="field">
+      <label>WebSocket URL</label>
+      <input id="inp-url" type="text" value="ws://localhost:9000/ws">
+    </div>
+    <div class="field">
+      <label>Token</label>
+      <input id="inp-token" type="password" placeholder="changeme">
+    </div>
+    <div class="err" id="err">Connection failed — check URL and token.</div>
+    <button class="connect-btn" onclick="connect()">Connect →</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">ScreenShare</div>
+  <div class="pill"><div class="dot" id="dot"></div><span id="st">disconnected</span></div>
+  <div class="stats">
+    FPS <span id="fps">—</span> &nbsp;|&nbsp;
+    RES <span id="res">—</span>
+  </div>
+  <button class="btn" id="btn-in" onclick="toggleInput()">INPUT OFF</button>
+  <button class="btn" onclick="disconnect()">DISCONNECT</button>
+</header>
+
+<div id="viewport">
+  <canvas id="c"></canvas>
+  <div id="cur"></div>
+</div>
+
+<footer>
+  <span id="foot">not connected</span>
+  <span class="sep"></span>
+  <span id="coords" style="color:var(--accent);letter-spacing:0.05em">—</span>
+  <span class="sep"></span>
+  <span>JPEG stream · Electron desktopCapturer</span>
+</footer>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const cur    = document.getElementById('cur');
+const dot    = document.getElementById('dot');
+const stEl   = document.getElementById('st');
+const fpsEl  = document.getElementById('fps');
+const resEl  = document.getElementById('res');
+const footEl   = document.getElementById('foot');
+const coordsEl = document.getElementById('coords');
+const btnIn    = document.getElementById('btn-in');
+
+const DEBUG = false;   // set to true to show footer with coords/stats
+
+document.querySelector('footer').style.display = DEBUG ? 'flex' : 'none';
+
+let ws = null, inputOn = false;
+let screenW = 1280, screenH = 800;
+let contentW = 1280, contentH = 800;
+let frames = 0;
+let lastClick = null;   // stores last mapped coords for calibration pairing
+const calibLog = [];    // collected calibration rows
+setInterval(() => { fpsEl.textContent = frames; frames = 0; }, 1000);
+
+function connect() {
+  const url   = document.getElementById('inp-url').value.trim();
+  const token = document.getElementById('inp-token').value.trim();
+  if (!url) return;
+
+  const wsUrl = url.includes('?') ? url : `${url}?token=${encodeURIComponent(token)}`;
+  setState('warn', 'connecting…');
+
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('err').style.display = 'none';
+    setState('online', 'connected');
+    footEl.textContent = url;
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'init') {
+      screenW = msg.width; screenH = msg.height;
+      contentW = msg.contentW || msg.width;
+      contentH = msg.contentH || msg.height;
+      canvas.width = screenW; canvas.height = screenH;
+      resEl.textContent = `${screenW}×${screenH}`;
+    } else if (msg.type === 'video-dims') {
+      resEl.textContent = `${msg.width}×${msg.height}`;
+    } else if (msg.type === 'frame') {
+      const img = new Image();
+      img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); frames++; };
+      img.src = 'data:image/jpeg;base64,' + msg.data;
+    } else if (msg.type === 'calibration-hit') {
+      const sent = lastClick || { x: '?', y: '?' };
+      const entry = {
+        point:      msg.index + 1,
+        sent_x:     sent.x,
+        sent_y:     sent.y,
+        app_x:      msg.appX,
+        app_y:      msg.appY,
+        diff_x:     typeof sent.x === 'number' ? msg.appX - sent.x : '?',
+        diff_y:     typeof sent.y === 'number' ? msg.appY - sent.y : '?',
+      };
+      calibLog.push(entry);
+      console.log(`[calib ${entry.point}/5]  sent=(${entry.sent_x}, ${entry.sent_y})  app=(${entry.app_x}, ${entry.app_y})  diff=(${entry.diff_x}, ${entry.diff_y})`);
+      if (msg.index === 4) {
+        console.log('\n=== CALIBRATION COMPLETE ===');
+        console.table(calibLog);
+      }
+    }
+  };
+
+  ws.onerror = () => {
+    document.getElementById('err').style.display = 'block';
+    setState('error', 'error');
+  };
+
+  ws.onclose = () => {
+    setState('', 'disconnected');
+    document.getElementById('overlay').style.display = 'flex';
+    ws = null;
+  };
+}
+
+function disconnect() { if (ws) ws.close(); }
+
+function toggleInput() {
+  inputOn = !inputOn;
+  btnIn.textContent = inputOn ? 'INPUT ON' : 'INPUT OFF';
+  btnIn.classList.toggle('active', inputOn);
+  cur.style.display = inputOn ? 'block' : 'none';
+}
+
+function send(obj) {
+  if (ws && ws.readyState === 1) {
+    if (obj.type !== 'mousemove') {
+      console.log('[send]', JSON.stringify(obj));
+    }
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+function coords(e) {
+  const vpEl = document.getElementById('viewport');
+  const vw   = vpEl.clientWidth;
+  const vh   = vpEl.clientHeight;
+  const vr   = vpEl.getBoundingClientRect();   // only for left/top offset
+
+  // Find the actual rendered video area (object-fit: contain letterboxing).
+  const bitmapRatio    = screenW / screenH;
+  const containerRatio = vw / vh;
+  let cw, ch, ox, oy;
+  if (containerRatio >= bitmapRatio) {
+    ch = vh; cw = ch * bitmapRatio;
+    ox = (vw - cw) / 2; oy = 0;
+  } else {
+    cw = vw; ch = cw / bitmapRatio;
+    ox = 0; oy = (vh - ch) / 2;
+  }
+  // Normalize to 0–1000. Conversion to pixels happens in main.js.
+  return {
+    x: Math.round((e.clientX - vr.left - ox) / cw * 1000),
+    y: Math.round((e.clientY - vr.top  - oy) / ch * 1000),
+  };
+}
+
+const vp = document.getElementById('viewport');
+vp.addEventListener('mousemove', e => {
+  const vr = vp.getBoundingClientRect();
+  cur.style.left = (e.clientX - vr.left) + 'px';
+  cur.style.top  = (e.clientY - vr.top)  + 'px';
+  const c = coords(e);
+  coordsEl.textContent = `norm(${c.x}, ${c.y})  screenRef(${screenW}×${screenH})`;
+  if (inputOn) send({ type: 'mousemove', ...c });
+});
+vp.addEventListener('mousedown',  e => { cur.classList.add('clicking');    if (inputOn) { e.preventDefault(); const c = coords(e); lastClick = c; send({ type: 'mousedown',  button: e.button, ...c }); } });
+vp.addEventListener('mouseup',    e => { cur.classList.remove('clicking'); if (inputOn) send({ type: 'mouseup',    button: e.button, ...coords(e) }); });
+vp.addEventListener('dblclick',   e => { if (inputOn) send({ type: 'dblclick', ...coords(e) }); });
+vp.addEventListener('wheel',      e => { e.preventDefault(); if (inputOn) send({ type: 'scroll', deltaY: e.deltaY, ...coords(e) }); }, { passive: false });
+vp.addEventListener('contextmenu',e => e.preventDefault());
+document.addEventListener('keydown', e => { if (inputOn) { e.preventDefault(); send({ type: 'keydown', key: e.key, code: e.code }); } });
+document.addEventListener('keyup',   e => { if (inputOn) send({ type: 'keyup', key: e.key, code: e.code }); });
+
+function setState(cls, text) {
+  dot.className = 'dot ' + cls; stEl.textContent = text;
+}
+
+// Pre-fill from query params: viewer.html?host=192.168.1.5&token=abc
+const p = new URLSearchParams(location.search);
+if (p.get('host'))  document.getElementById('inp-url').value   = `ws://${p.get('host')}:9000/ws`;
+if (p.get('token')) document.getElementById('inp-token').value = p.get('token');
+</script>
+</body>
+</html>

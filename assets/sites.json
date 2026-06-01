@@ -1,0 +1,112 @@
+{
+  "screenshare": {
+    "enabled": true,
+    "port": 9000,
+    "token": "changeme",
+    "fps": 20,
+    "quality": 1.0,
+    "debug": false
+  },
+  "background": "#1A1A2E",
+  "hideScrollbars": true,
+  "title": {
+    "text": "DASH MULTIVIEW",
+    "color": "#ffffff",
+    "size": 20,
+    "font": "system-ui, sans-serif",
+    "position": "top"
+  },
+  "logoBar": {
+    "position": "bottom",
+    "plateColor": "rgb(238, 241, 245)",
+    "height": 64
+  },
+  "pages": [
+    {
+      "name": "Page 1",
+      "gridCols": 10,
+      "gridRows": 6,
+      "sites": [
+        {
+          "title": "Site 1",
+          "url": "https://site1.com/",
+          "grid": { "col": 1, "row": 1, "colSpan": 2, "rowSpan": 2 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 2",
+          "url": "https://site2.com/",
+          "grid": { "col": 1, "row": 3, "colSpan": 2, "rowSpan": 2 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 3",
+          "url": "https://site3.com/",
+          "grid": { "col": 1, "row": 5, "colSpan": 2, "rowSpan": 2 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 4",
+          "url": "https://site4.com/",
+          "grid": { "col": 3, "row": 1, "colSpan": 2, "rowSpan": 6 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 5",
+          "url": "https://site5.com/",
+          "grid": { "col": 5, "row": 1, "colSpan": 4, "rowSpan": 3 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 6",
+          "url": "https://site6.com/",
+          "grid": { "col": 5, "row": 4, "colSpan": 4, "rowSpan": 3 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 7",
+          "url": "https://site7.com/",
+          "grid": { "col": 9, "row": 1, "colSpan": 2, "rowSpan": 3 },
+          "zoom": 0.8
+        },
+        {
+          "title": "Site 8",
+          "url": "https://site8.com/",
+          "grid": { "col": 9, "row": 4, "colSpan": 2, "rowSpan": 3 },
+          "zoom": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Page 2",
+      "gridCols": 10,
+      "gridRows": 6,
+      "sites": [
+        {
+          "title": "Site 9",
+          "url": "https://site9.com/",
+          "grid": { "col": 1, "row": 1, "colSpan": 4, "rowSpan": 2 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 10",
+          "url": "https://site10.com/",
+          "grid": { "col": 1, "row": 3, "colSpan": 4, "rowSpan": 2 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 11",
+          "url": "https://site11.com/",
+          "grid": { "col": 1, "row": 5, "colSpan": 4, "rowSpan": 2 },
+          "zoom": 1.0
+        },
+        {
+          "title": "Site 12",
+          "url": "https://site12.com/",
+          "grid": { "col": 5, "row": 1, "colSpan": 5, "rowSpan": 6 },
+          "zoom": 1.0
+        }
+      ]
+    }
+  ]
+}
